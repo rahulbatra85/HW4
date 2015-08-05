@@ -2,31 +2,34 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class CoarseGrainedListSet<T> implements ListSet<T> {
 
-     public class Link {
+     public class cLink {
 
         private T obj;
-        public Link next;
+        public cLink next;
         public int id;
 
-        public Link(T obj) {
+        public cLink(T obj) {
             this.obj = obj;
             this.id = obj.hashCode();
-            this.next = new Link(null);
+            this.next = new cLink(null);
         }
     }
 
-    private Link head;
+    private cLink head;
     private ReentrantLock coarseLock;
 
     public CoarseGrainedListSet() {
         this.coarseLock = new ReentrantLock();
-        this.head = new Link(null);
+
+        this.head = new cLink(null);      //HEAD
         this.head.id = Integer.MIN_VALUE;
+
+        this.head.next  = new cLink(null);//TAIL
         this.head.next.id = Integer.MAX_VALUE;
     }
 
     public boolean add(T obj) {
-        Link prev, curr;
+        cLink prev, curr;
         int obj_id = obj.hashCode();
         coarseLock.lock();
 
@@ -43,9 +46,10 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
                 return false;
             }
             else {
-                Link this_obj = new Link(obj);
-                this_obj.next = curr;
-                prev.next = this_obj;
+                
+                cLink new_obj = new cLink(obj);
+                new_obj.next = curr;
+                prev.next = new_obj;
                 return true;
             }
         }
@@ -55,7 +59,7 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
     }
 
     public boolean remove(T obj) {
-        Link prev, curr;
+        cLink prev, curr;
         int obj_id = obj.hashCode();
         coarseLock.lock();
         try {
@@ -82,7 +86,7 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
 
 
     public boolean contains(T obj) {
-        Link prev, curr;
+        cLink prev, curr;
         int obj_id = obj.hashCode();
         coarseLock.lock();
         try {

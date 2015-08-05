@@ -1,92 +1,108 @@
 import java.util.concurrent.atomic.AtomicMarkableReference;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class LockFreeListSet<T> implements ListSet<T> {
 
-    public class Node {
-        public T value;
-        public AtomicReference<Node> next;
+    public class Link {
+        private T obj;
+        public int id;
+        public AtomicMarkableReference<Link> next;
 
-        public Node(T value) {
-            this.value = value;
-            next = new AtomicReference<Node>(null);
+        public Link(T obj) {
+            this.obj = obj;
+            this.id = obj.hashCode();
+            this.next = new AtomicMarkableReference<>(null, false);
         }
     }
 
-    class Window {
-        public Node pred, curr;
-        Window(Node myPred, Node myCurr) {
-            pred = myPred; curr = myCurr;
+    public class Window {
+        public Link prev, curr;
+
+        public Window(Link wPrev, Link wCurr) {
+            prev = wPrev; curr = wCurr;
         }
     }
 
-    public Window find(Node head, int key) {
-        Node pred = null, curr = null, succ = null;
+    private Link head;
+    private Link tail;
+    
+    public LockFreeListSet() {
+        tail = new Link(null);
+        head = new Link(null);
+        head.next.set(tail, false);
+    }
+
+    
+    public Window find(Link head, int this_id) {
+       
+        Link prev = null, curr = null, ok = null;
         boolean[] marked = {false};
-        boolean snip;
-        retry: while (true) {
-            pred = head;
-            curr = pred.next.getReference();
+        boolean check;
+        
+        retry: 
+        while (true) {
+            prev = head;
+            curr = prev.next.getReference();
             while (true) {
-                succ = curr.next.get(marked);
+                ok = curr.next.get(marked);
                 while (marked[0]) {
-                    snip = pred.next.compareAndSet(curr, succ, false, false);
-                    if (!snip) continue retry;
-                    curr = succ;
-                    succ = curr.next.get(marked);
+                    check = prev.next.compareAndSet(curr, ok, false, false);
+                    if (!check) continue retry;
+                    curr = ok;
+                    ok = curr.next.get(marked);
                 }
-                if (curr.key >= key)
-                    return new Window(pred, curr);
-                pred = curr;
-                curr = succ;
+                if (curr.id >= this_id)
+                    return new Window(prev, curr);
+                prev = curr;
+                curr = ok;
             }
         }
     }
 
-    public boolean add(T item) {
-        int key = item.hashCode();
+    public boolean add(T obj) {
+        int this_id = obj.hashCode();
         while (true) {
-            Window window = find(head, key);
-            Node pred = window.pred, curr = window.curr;
-            if (curr.key == key) {
+            Window window = find(head, this_id);
+            Link prev = window.prev, curr = window.curr;
+            if (curr.id == this_id) {
                 return false;
-            } else {
-                Node node = new Node(item);
-                node.next = new AtomicMarkableReference(curr, false);
-                if (pred.next.compareAndSet(curr, node, false, false)) {
+            }
+            else {
+                Link Link = new Link(obj);
+                Link.next = new AtomicMarkableReference(curr, false);
+                if (prev.next.compareAndSet(curr, Link, false, false)) {
                     return true;
                 }
             }
         }
     }
 
-    public boolean remove(T item) {
-        int key = item.hashCode();
-        boolean snip;
+    public boolean remove(T obj) {
+        int this_id = obj.hashCode();
+        boolean check;
         while (true) {
-            Window window = find(head, key);
-            Node pred = window.pred, curr = window.curr;
-            if (curr.key != key) {
+            Window window = find(head, this_id);
+            Link prev = window.prev, curr = window.curr;
+            if (curr.id != this_id) {
                 return false;
-            } else {
-                Node succ = curr.next.getReference();
-                snip = curr.next.compareAndSet(succ, succ, false, true);
-                if (!snip)
-                    continue;
-                pred.next.compareAndSet(curr, succ, false, false);
+            }
+            else {
+                Link ok = curr.next.getReference();
+                check = curr.next.compareAndSet(ok, ok, false, true);
+                if (!check) continue;
+                prev.next.compareAndSet(curr, ok, false, false);
                 return true;
             }
         }
     }
 
-    public boolean contains(T item) {
-        boolean[] marked = false;
-        int key = item.hashCode();
-        Node curr = head;
-        while (curr.key < key) {
+    public boolean contains(T obj) {
+        boolean[] marked = {false};
+        int this_id = obj.hashCode();
+        Link curr = head;
+        while (curr.id < this_id) {
             curr = curr.next.getReference();
-            Node succ = curr.next.get(marked);
+            Link ok = curr.next.get(marked);
         }
-        return (curr.key == key && !marked[0])
+        return (curr.id == this_id && !marked[0]);
     }
 }
