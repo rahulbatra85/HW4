@@ -1,76 +1,108 @@
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class CoarseGrainedListSet<T> implements ListSet<T> {
 
-    public class Node {
+     public class Link {
 
-        public T value;
-        public AtomicReference<Node> next;
+        private T obj;
+        public Link next;
+        public int id;
 
-        public Node(T value) {
-            this.value = value;
-            next = new AtomicReference<Node>(null);
+        public Link(T obj) {
+            this.obj = obj;
+            this.id = obj.hashCode();
+            this.next = new Link(null);
         }
     }
 
-    private Node head;
-    private Lock lock = new ReentrantLock();
+    private Link head;
+    private ReentrantLock coarseLock;
 
     public CoarseGrainedListSet() {
-        head = new Node(Integer.MIN_VALUE);
-        head.next = new Node(Integer.MAX_VALUE);
+        this.coarseLock = new ReentrantLock();
+        this.head = new Link(null);
+        this.head.id = Integer.MIN_VALUE;
+        this.head.next.id = Integer.MAX_VALUE;
     }
 
-    public boolean add(T item) {
-        Node pred, curr;
-        int key = item.hashCode();
-        lock.lock();
+    public boolean add(T obj) {
+        Link prev, curr;
+        int obj_id = obj.hashCode();
+        coarseLock.lock();
+
         try {
-            pred = head;
-            curr = pred.next;
-            while (curr.key < key) {
-                pred = curr;
+            prev = head;
+            curr = prev.next;
+
+            while (curr.id < obj_id) {
+                prev = curr;
                 curr = curr.next;
             }
-            if (key == curr.key) {
+
+            if (obj_id == curr.id) {
                 return false;
-            } else {
-                Node node = new Node(item);
-                node.next = curr;
-                pred.next = node;
+            }
+            else {
+                Link this_obj = new Link(obj);
+                this_obj.next = curr;
+                prev.next = this_obj;
                 return true;
             }
-        } finally {
-            lock.unlock();
+        }
+        finally {
+            coarseLock.unlock();
         }
     }
 
-    public boolean remove(T item) {
-        Node pred, curr;
-        int key = item.hashCode();
-        lock.lock();
+    public boolean remove(T obj) {
+        Link prev, curr;
+        int obj_id = obj.hashCode();
+        coarseLock.lock();
         try {
-            pred = head;
-            curr = pred.next;
-            while (curr.key < key) {
-                pred = curr;
+            prev = head;
+            curr = prev.next;
+
+            while (curr.id < obj_id) {
+                prev = curr;
                 curr = curr.next;
             }
-            if (key == curr.key) {
-                pred.next = curr.next;
+
+            if (obj_id == curr.id) {
+                prev.next = curr.next;
                 return true;
-            } else {
+            }
+            else {
                 return false;
             }
-        } finally {
-            lock.unlock();
+        }
+        finally {
+            coarseLock.unlock();
         }
     }
 
 
-    public boolean contains(T value) {
+    public boolean contains(T obj) {
+        Link prev, curr;
+        int obj_id = obj.hashCode();
+        coarseLock.lock();
+        try {
+            prev = head;
+            curr = prev.next;
+
+            while (curr.next != null && obj_id != curr.id) {
+                System.out.println(curr.id + " " + obj_id);
+                curr = curr.next;
+            }
+
+            if (obj_id == curr.id) {
+                System.out.println("Found: " + obj);
+                return true;
+            }
+        }
+        finally {
+            coarseLock.unlock();
+        }
+        System.out.println("Not Found: " + obj);
         return false;
     }
 }

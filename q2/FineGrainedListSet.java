@@ -4,38 +4,46 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class FineGrainedListSet<T> implements ListSet<T> {
 
-    public class Node {
+    public class Link {
 
-        public T value;
-        public AtomicReference<Node> next;
-
-        public Node(T value) {
-            this.value = value;
-            next = new AtomicReference<Node>(null);
+        private T obj;
+        private Lock;
+        public Link next;
+        public int id;
+        
+        public Link(T obj) {
+            this.obj = obj;
+            this.id = obj.hashCode();
+            this.next = new Link(null);
         }
     }
+    
+    private Link head;
+    
+    public FineGrainedListSet() {
+        this.head = new Link(null);
+        this.head.id = Integer.MIN_VALUE;
+        this.head.next.id = Integer.MAX_VALUE;
+    }
 
-    private Node head;
-    private Lock lock = new ReentrantLock();
-
-    public boolean add(T item) {
-        int key = item.hashCode();
+    public boolean add(T obj) {
+        int this_id = obj.hashCode();
         head.lock();
-        Node pred = head;
+        Link pred = head;
         try {
-            Node curr = pred.next;
+            Link curr = pred.next;
             curr.lock();
             try {
-                while (curr.key < key) {
+                while (curr.id < this_id) {
                     pred.unlock();
                     pred = curr;
                     curr = curr.next;
                     curr.lock();
                 }
-                if (curr.key == key) {
+                if (curr.id == this_id) {
                     return false;
                 }
-                Node newNode = new Node(item);
+                Link newNode = new Link(obj);
                 newNode.next = curr;
                 pred.next = newNode;
                 return true;
@@ -47,22 +55,22 @@ public class FineGrainedListSet<T> implements ListSet<T> {
         }
     }
 
-    public boolean remove(T item) {
-        Node pred = null, curr = null;
-        int key = item.hashCode();
+    public boolean remove(T obj) {
+        Link pred = null, curr = null;
+        int this_id = obj.hashCode();
         head.lock();
         try {
             pred = head;
             curr = pred.next;
             curr.lock();
             try {
-                while (curr.key < key) {
+                while (curr.id < this_id) {
                     pred.unlock();
                     pred = curr;
                     curr = curr.next;
                     curr.lock();
                 }
-                if (curr.key == key) {
+                if (curr.id == this_id) {
                     pred.next = curr.next;
                     return true;
                 }
