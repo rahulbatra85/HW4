@@ -19,13 +19,15 @@ public class FineGrainedListSet<T> implements ListSet<T> {
     }
     
     private fLink head;
-    
+    final private Integer HEAD = Integer.valueOf(0);
+    final private Integer TAIL = Integer.valueOf(1);
+
     public FineGrainedListSet() {
 
-        this.head = new fLink(null);      //HEAD
+        this.head = new fLink((T) HEAD);      //HEAD
         this.head.id = Integer.MIN_VALUE;
 
-        this.head.next  = new fLink(null);//TAIL
+        this.head.next  = new fLink((T) TAIL);//TAIL
         this.head.next.id = Integer.MAX_VALUE;
     }
 
@@ -109,18 +111,18 @@ public class FineGrainedListSet<T> implements ListSet<T> {
             pred = head;
             curr = pred.next;
             while (curr.next != null && this_id != curr.id) {
-                System.out.println(curr.id + " " + this_id);
+                //DEBUG System.out.println(curr.id + " " + this_id);
                 curr = curr.next;
             }
             if (this_id == curr.id) {
-                System.out.println("Found: " + obj);
+                //DEBUG System.out.println("Found: " + obj);
                 return true;
             }
 
         } finally {
             pred.local.unlock();
         }
-        System.out.println("Not Found: " + obj);
+        //DEBUG System.out.println("Not Found: " + obj);
         return false;
     }
 
@@ -135,8 +137,8 @@ public class FineGrainedListSet<T> implements ListSet<T> {
         Thread mythread1 = new Thread() {
             @Override
             public void run() {
-                boolean add7 = set.add(7);
-                boolean add5 = set.add(5);
+                boolean add7 = set.add(new Integer(7));
+                boolean add5 = set.add(new Integer(5));
                 added[0] = add5;
                 added[1] = add7;
             }
@@ -145,8 +147,8 @@ public class FineGrainedListSet<T> implements ListSet<T> {
         Thread mythread2 = new Thread() {
             @Override
             public void run() {
-                boolean take7 = set.remove(7);
-                boolean take5 = set.remove(5);
+                boolean take7 = set.remove(new Integer(7));
+                boolean take5 = set.remove(new Integer(5));
                 taken[0] = take5;
                 taken[1] = take7;
             }

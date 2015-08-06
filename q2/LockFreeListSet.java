@@ -25,15 +25,23 @@ public class LockFreeListSet<T> implements ListSet<T> {
 
     private Link head;
     private Link tail;
-    
+    final private Integer HEAD = Integer.valueOf(0);
+    final private Integer TAIL = Integer.valueOf(1);
+
+
     public LockFreeListSet() {
-        tail = new Link(null);
-        head = new Link(null);
+        this.head = new Link((T) HEAD);
+        this.tail = new Link((T) TAIL);
+
+        this.head.id = Integer.MIN_VALUE;
+        this.tail.id = Integer.MAX_VALUE;
+
         head.next.set(tail, false);
     }
 
     
     public Snapshot find(Link head, int this_id) {
+    // Helper function to find insertion/sub point
        
         Link prev = null, curr = null, ok = null;
         boolean[] marked = {false};
@@ -47,7 +55,8 @@ public class LockFreeListSet<T> implements ListSet<T> {
                 ok = curr.next.get(marked);
                 while (marked[0]) {
                     check = prev.next.compareAndSet(curr, ok, false, false);
-                    if (!check) continue retry;
+                    if (!check)
+                        continue retry;
                     curr = ok;
                     ok = curr.next.get(marked);
                 }
@@ -97,7 +106,8 @@ public class LockFreeListSet<T> implements ListSet<T> {
             else {
                 Link ok = curr.next.getReference();
                 check = curr.next.compareAndSet(ok, ok, false, true);
-                if (!check) continue;
+                if (!check)
+                    continue;
                 prev.next.compareAndSet(curr, ok, false, false);
                 return true;
             }
@@ -128,8 +138,8 @@ public class LockFreeListSet<T> implements ListSet<T> {
         Thread mythread1 = new Thread() {
             @Override
             public void run() {
-                boolean add7 = set.add(7);
-                boolean add5 = set.add(5);
+                boolean add7 = set.add(new Integer(7));
+                boolean add5 = set.add(new Integer(5));
                 added[0] = add5;
                 added[1] = add7;
             }
@@ -138,8 +148,8 @@ public class LockFreeListSet<T> implements ListSet<T> {
         Thread mythread2 = new Thread() {
             @Override
             public void run() {
-                boolean take7 = set.remove(7);
-                boolean take5 = set.remove(5);
+                boolean take7 = set.remove(new Integer(7));
+                boolean take5 = set.remove(new Integer(5));
                 taken[0] = take5;
                 taken[1] = take7;
             }

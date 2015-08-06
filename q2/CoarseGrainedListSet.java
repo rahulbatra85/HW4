@@ -11,21 +11,22 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
         public cLink(T obj) {
             this.obj = obj;
             this.id = obj.hashCode();
-            this.next = new cLink(null);
-            //this.next = null;
+            this.next =null;
         }
     }
 
     private cLink head;
     private ReentrantLock coarseLock;
+    final private Integer HEAD = Integer.valueOf(0);
+    final private Integer TAIL = Integer.valueOf(1);
 
     public CoarseGrainedListSet() {
         this.coarseLock = new ReentrantLock();
 
-        this.head = new cLink(null);      //HEAD
+        this.head = new cLink((T) HEAD);      //HEAD
         this.head.id = Integer.MIN_VALUE;
 
-        this.head.next  = new cLink(null);//TAIL
+        this.head.next  = new cLink((T) TAIL);//TAIL
         this.head.next.id = Integer.MAX_VALUE;
     }
 
@@ -95,19 +96,19 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
             curr = prev.next;
 
             while (curr.next != null && obj_id != curr.id) {
-                System.out.println(curr.id + " " + obj_id);
+                //DEBUG System.out.println(curr.id + " " + obj_id);
                 curr = curr.next;
             }
 
             if (obj_id == curr.id) {
-                System.out.println("Found: " + obj);
+                //DEBUG System.out.println("Found: " + obj);
                 return true;
             }
         }
         finally {
             coarseLock.unlock();
         }
-        System.out.println("Not Found: " + obj);
+        //DEBUG System.out.println("Not Found: " + obj);
         return false;
     }
 
@@ -145,6 +146,7 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
         }
         catch (Exception e) {
             System.err.println("thread error: "+e);
+
         }
 
         System.out.println(added[0] + " " + added[1]);
