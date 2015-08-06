@@ -14,11 +14,12 @@ public class LockFreeListSet<T> implements ListSet<T> {
         }
     }
 
-    public class Window {
+    public class Snapshot {
         public Link prev, curr;
 
-        public Window(Link wPrev, Link wCurr) {
-            prev = wPrev; curr = wCurr;
+        public Snapshot(Link lPrev, Link lCurr) {
+            prev = lPrev;
+            curr = lCurr;
         }
     }
 
@@ -32,7 +33,7 @@ public class LockFreeListSet<T> implements ListSet<T> {
     }
 
     
-    public Window find(Link head, int this_id) {
+    public Snapshot find(Link head, int this_id) {
        
         Link prev = null, curr = null, ok = null;
         boolean[] marked = {false};
@@ -51,7 +52,7 @@ public class LockFreeListSet<T> implements ListSet<T> {
                     ok = curr.next.get(marked);
                 }
                 if (curr.id >= this_id)
-                    return new Window(prev, curr);
+                    return new Snapshot(prev, curr);
                 prev = curr;
                 curr = ok;
             }
@@ -59,10 +60,14 @@ public class LockFreeListSet<T> implements ListSet<T> {
     }
 
     public boolean add(T obj) {
+
         int this_id = obj.hashCode();
         while (true) {
-            Window window = find(head, this_id);
-            Link prev = window.prev, curr = window.curr;
+
+            Snapshot frame = find(head, this_id);
+            Link prev = frame.prev;
+            Link curr = frame.curr;
+
             if (curr.id == this_id) {
                 return false;
             }
@@ -77,11 +82,15 @@ public class LockFreeListSet<T> implements ListSet<T> {
     }
 
     public boolean remove(T obj) {
+
         int this_id = obj.hashCode();
         boolean check;
         while (true) {
-            Window window = find(head, this_id);
-            Link prev = window.prev, curr = window.curr;
+
+            Snapshot frame = find(head, this_id);
+            Link prev = frame.prev;
+            Link curr = frame.curr;
+
             if (curr.id != this_id) {
                 return false;
             }
@@ -99,10 +108,53 @@ public class LockFreeListSet<T> implements ListSet<T> {
         boolean[] marked = {false};
         int this_id = obj.hashCode();
         Link curr = head;
+
         while (curr.id < this_id) {
             curr = curr.next.getReference();
-            Link ok = curr.next.get(marked);
+            curr.next.get(marked);
         }
         return (curr.id == this_id && !marked[0]);
     }
+
+
+    public static void main (String args []) {
+
+        final ListSet set = new LockFreeListSet();
+        final int type = args.length < 1 ? 0 : new Integer(args[0]);
+
+        final boolean[] added = new boolean[2];
+        final boolean[] taken = new boolean[2];
+
+        Thread mythread1 = new Thread() {
+            @Override
+            public void run() {
+                boolean add7 = set.add(7);
+                boolean add5 = set.add(5);
+                added[0] = add5;
+                added[1] = add7;
+            }
+        };
+
+        Thread mythread2 = new Thread() {
+            @Override
+            public void run() {
+                boolean take7 = set.remove(7);
+                boolean take5 = set.remove(5);
+                taken[0] = take5;
+                taken[1] = take7;
+            }
+        };
+
+        try {
+            mythread1.start();
+            mythread2.start();
+        }
+        catch (Exception e) {
+            System.err.println("thread error: "+e);
+        }
+
+        System.out.println(added[0] + " " + added[1]);
+        System.out.println(taken[0] + " " + taken[1]);
+    }
+
 }

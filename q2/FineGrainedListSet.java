@@ -123,4 +123,46 @@ public class FineGrainedListSet<T> implements ListSet<T> {
         System.out.println("Not Found: " + obj);
         return false;
     }
+
+    public static void main (String args []) { //QUICK TEST
+
+        final ListSet set = new FineGrainedListSet();
+        final int type = args.length < 1 ? 0 : new Integer(args[0]);
+
+        final boolean[] added = new boolean[2];
+        final boolean[] taken = new boolean[2];
+
+        Thread mythread1 = new Thread() {
+            @Override
+            public void run() {
+                boolean add7 = set.add(7);
+                boolean add5 = set.add(5);
+                added[0] = add5;
+                added[1] = add7;
+            }
+        };
+
+        Thread mythread2 = new Thread() {
+            @Override
+            public void run() {
+                boolean take7 = set.remove(7);
+                boolean take5 = set.remove(5);
+                taken[0] = take5;
+                taken[1] = take7;
+            }
+        };
+
+        try {
+            mythread1.start();
+            mythread2.start();
+        }
+        catch (Exception e) {
+            System.err.println("thread error: "+e);
+        }
+
+        System.out.println(added[0] + " " + added[1]);
+        System.out.println(taken[0] + " " + taken[1]);
+    }
+
+
 }
