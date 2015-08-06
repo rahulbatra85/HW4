@@ -12,6 +12,7 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
             this.obj = obj;
             this.id = obj.hashCode();
             this.next = new cLink(null);
+            //this.next = null;
         }
     }
 
@@ -112,7 +113,7 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
 
     public static void main (String args []) {
 
-        final ListSet set = new CoarseGrainedListSet();
+        final ListSet<Integer> set = new CoarseGrainedListSet<>();
         final int type = args.length < 1 ? 0 : new Integer(args[0]);
 
         final boolean[] added = new boolean[2];
@@ -121,8 +122,8 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
         Thread mythread1 = new Thread() {
             @Override
             public void run() {
-                boolean add7 = set.add(7);
-                boolean add5 = set.add(5);
+                boolean add7 = set.add(new Integer(7));
+                boolean add5 = set.add(new Integer(5));
                 added[0] = add5;
                 added[1] = add7;
             }
@@ -131,8 +132,8 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
         Thread mythread2 = new Thread() {
             @Override
             public void run() {
-                boolean take7 = set.remove(7);
-                boolean take5 = set.remove(5);
+                boolean take7 = set.remove(new Integer(7));
+                boolean take5 = set.remove(new Integer(5));
                 taken[0] = take5;
                 taken[1] = take7;
             }

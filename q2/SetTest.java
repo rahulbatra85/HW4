@@ -22,11 +22,11 @@ public class SetTest {
         final int type = args.length < 1 ? 0 : new Integer(args[0]);
         ListSet set;
 
-
         switch (type%3) {
             case 0 :  set = new CoarseGrainedListSet(); break;
             case 1 :  set = new FineGrainedListSet(); break;
             case 2 :  set = new LockFreeListSet(); break;
+            default: set = new CoarseGrainedListSet(); break;
         }
 
         int numThreads = 1000;
