@@ -115,7 +115,6 @@ public class CoarseGrainedListSet<T> implements ListSet<T> {
     public static void main (String args []) {
 
         final ListSet<Integer> set = new CoarseGrainedListSet<>();
-        final int type = args.length < 1 ? 0 : new Integer(args[0]);
 
         final boolean[] added = new boolean[2];
         final boolean[] taken = new boolean[2];
