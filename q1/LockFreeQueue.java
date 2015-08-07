@@ -1,61 +1,82 @@
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.*;
 
 public class LockFreeQueue<T> implements MyQueue<T> {
 
-    public class Node {
 
-        public T value;
-        public AtomicReference<Node> next;
+  //Node class
+  class Node<T>{
+    T value;
+    AtomicStampedReference<Node<T>> next;
 
-        public Node(T value) {
-            this.value = value;
-            next = new AtomicReference<Node>(null);
+    Node(T value){
+      this.value = value;
+      this.next = new AtomicStampedReference<Node<T>>(null, 0);
+    }
+  }
+
+  AtomicStampedReference<Node<T>> mHead; //Queue Head
+  AtomicStampedReference<Node<T>> mTail; //Queue Tail
+
+  //Constructor
+  LockFreeQueue(){
+    Node<T> node = new Node<T>(null); //Sentinel Node
+
+    //Tail and head point to sentinel node
+    mHead = new AtomicStampedReference<Node<T>>(node, 0);
+    mTail = new AtomicStampedReference<Node<T>>(node, 0);
+  }
+
+  //Enqueue
+  public boolean enq(T value) {
+
+    //Create new node
+    Node<T> node = new Node<T>(value);
+    int[] tailStamp = new int[1];
+    int[] nextStamp = new int[1];
+    Node<T> tail;
+    while(true){
+      tail = mTail.get(tailStamp); //Read tail
+      Node<T> next = tail.next.get(nextStamp); //Read next after tail
+
+      if(tail == mTail.getReference()){
+        if(next == null){
+          if(tail.next.compareAndSet(next,node,nextStamp[0],nextStamp[0] + 1)){
+              break;
+          }
+        } else{
+            mTail.compareAndSet(tail,next,tailStamp[0],tailStamp[0] + 1);
         }
+      }
     }
+    mTail.compareAndSet(tail,node,tailStamp[0],tailStamp[0] + 1);
 
-    volatile Node head, tail;
+    return true;
+  }
 
-    public LockFreeQueue() {
-        head = new Node(null);
-        tail = head;
-    }
+  //Dequeue
+  public T deq() {
+    int[] tailStamp = new int[1];
+    int[] headStamp = new int[1];
+    int[] nextStamp = new int[1];
 
-    public void enq(T value) {
-        Node node = new Node(value);
-        while (true) {
-            Node last = tail.get();
-            Node next = last.next.get();
-            if (last == tail.get()) {
-                if (next == null) {
-                    if (last.next.compareAndSet(next, node)) {
-                        tail.compareAndSet(last, node);
-                        return;
-                    }
-                } else {
-                    tail.compareAndSet(last, next);
-                }
-            }
+    while(true){
+      Node<T> head = mHead.get(headStamp);
+      Node<T> tail = mTail.get(tailStamp);
+      Node<T> next = head.next.get(nextStamp);
+      
+      if(head == mHead.getReference()){
+        if(head == tail){
+          if(next == null){
+            return null;
+          }
+          mTail.compareAndSet(tail, next, tailStamp[0], tailStamp[0]+1);
+        } else{
+          T value = next.value;
+          if(mHead.compareAndSet(head, next, headStamp[0], headStamp[0]+1)){
+            return value; 
+          }
         }
+      }
     }
-
-    public T deq() {
-        while (true) {
-            Node first = head.get();
-            Node last = tail.get();
-            Node next = first.next.get();
-            if (first == head.get()) {
-                if (first == last) {
-                    if (next == null) { //queue is empty
-                        return null;    //returning null per spec
-                    }
-                    tail.compareAndSet(last, next);
-                } else {
-                    T value = next.value;
-                    if (head.compareAndSet(first, next))
-                        return value;
-                }
-            }
-        }
-    }
-
+  }
 }
